@@ -34,6 +34,7 @@ python experiments/run_experiments.py \
   --execute
 ```
 (omit `--execute` to preview commands without running.)
+You can append `--size-variants small medium large` to the command above to materialize each experiment at multiple model sizes in one sweep.
 
 - From JSONL logs: `loss`, `tokens_per_sec`, `grad_norm`, `avg_collective_time_sec`, `peak_memory_gb`, `avg_data_wait_sec`, and timestamps per progress interval.
 - Derived metrics:

@@ -13,6 +13,21 @@ from fsdp_trainer.config_io import build_config_from_dict, load_config_file
 
 from .specs import ExperimentSpec, default_experiments
 
+SIZE_VARIANTS = {
+    "small": {
+        "model": {"embed_dim": 512, "num_layers": 6, "num_heads": 8, "ff_hidden_dim": 2048},
+        "data": {"seq_len": 128},
+    },
+    "medium": {
+        "model": {"embed_dim": 768, "num_layers": 12, "num_heads": 12, "ff_hidden_dim": 3072},
+        "data": {"seq_len": 256},
+    },
+    "large": {
+        "model": {"embed_dim": 1024, "num_layers": 16, "num_heads": 16, "ff_hidden_dim": 4096},
+        "data": {"seq_len": 384},
+    },
+}
+
 
 def deep_update(target: Dict[str, object], patch: Dict[str, object]) -> Dict[str, object]:
     for key, value in patch.items():
@@ -27,14 +42,18 @@ def materialize_config(
     spec: ExperimentSpec,
     output_dir: Path,
     base_cfg: TrainConfig,
+    size_variant: str | None = None,
 ) -> Path:
-    cfg_dict = json.loads(json.dumps(base_cfg.to_dict()))  # deep copy via json round-trip
+    cfg_dict = json.loads(json.dumps(base_cfg.to_dict()))
     deep_update(cfg_dict, spec.overrides)
+    if size_variant:
+        deep_update(cfg_dict, SIZE_VARIANTS[size_variant])
     runtime_block = cfg_dict.setdefault("runtime", {})
-    runtime_block["experiment_name"] = spec.name
-    metrics_path = output_dir / f"{spec.name}_metrics.jsonl"
+    exp_name = spec.name if size_variant is None else f"{spec.name}_{size_variant}"
+    runtime_block["experiment_name"] = exp_name
+    metrics_path = output_dir / f"{exp_name}_metrics.jsonl"
     runtime_block["metrics_path"] = str(metrics_path)
-    cfg_path = output_dir / f"{spec.name}.json"
+    cfg_path = output_dir / f"{exp_name}.json"
     cfg_path.write_text(json.dumps(cfg_dict, indent=2))
     return cfg_path
 
@@ -79,6 +98,12 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="Optional JSON/YAML config file that provides shared defaults",
     )
+    parser.add_argument(
+        "--size-variants",
+        nargs="*",
+        choices=list(SIZE_VARIANTS.keys()),
+        help="Optional model size variants (small/medium/large) to expand each experiment",
+    )
     return parser.parse_args()
 
 
@@ -94,14 +119,17 @@ def main() -> None:
     if args.base_config:
         base_cfg = build_config_from_dict(load_config_file(args.base_config))
 
+    size_variants = args.size_variants or [None]
     commands: List[tuple[str, str, str]] = []
     for spec in specs:
-        cfg_path = materialize_config(spec, args.output_dir, base_cfg)
-        command = build_command(args.launcher, spec.entrypoint, cfg_path)
-        commands.append((spec.name, command, spec.description))
-        if args.execute:
-            print(f"\n[exec] {spec.name}: {command}")
-            subprocess.run(command, shell=True, check=True)
+        for variant in size_variants:
+            cfg_path = materialize_config(spec, args.output_dir, base_cfg, variant)
+            command = build_command(args.launcher, spec.entrypoint, cfg_path)
+            exp_name = spec.name if variant is None else f"{spec.name}_{variant}"
+            commands.append((exp_name, command, spec.description))
+            if args.execute:
+                print(f"\n[exec] {exp_name}: {command}")
+                subprocess.run(command, shell=True, check=True)
 
     print("\nGenerated experiments:")
     for name, command, desc in commands:

@@ -86,6 +86,7 @@ This generates JSON configs, metrics files (`*_metrics.jsonl`), and optionally l
 - `ddp_checkpointed_fp16`: DDP + activation checkpointing.
 - `fsdp_manual_bf16`: this repo's manual FSDP (explicit gather/scatter) in bf16.
 - `fsdp_official` + ablations: official PyTorch FSDP with/without activation checkpointing and `limit_all_gathers` to highlight implementation differences.
+- Pass `--size-variants small medium large` to `experiments/run_experiments.py` (or `MAKE_SIZE_VARIANTS="small medium large" make sweep`) to materialize each experiment at multiple model scales.
 
 After runs complete, summarize throughput/loss and relative speedups:
 ```bash
