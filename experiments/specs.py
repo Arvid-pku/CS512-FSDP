@@ -17,6 +17,18 @@ class ExperimentSpec:
 def default_experiments() -> List[ExperimentSpec]:
     return [
         ExperimentSpec(
+            name="single_gpu_fp32",
+            entrypoint="run_single.py",
+            description="Single-process baseline to measure pure compute throughput.",
+            tags=("single", "baseline"),
+            overrides={
+                "runtime": {
+                    "mixed_precision": "fp32",
+                    "experiment_name": "single_gpu_fp32",
+                }
+            },
+        ),
+        ExperimentSpec(
             name="ddp_fp32",
             entrypoint="run_ddp.py",
             description="DDP baseline in full precision for throughput and loss reference.",
@@ -26,6 +38,21 @@ def default_experiments() -> List[ExperimentSpec]:
                     "mixed_precision": "fp32",
                     "experiment_name": "ddp_fp32",
                 }
+            },
+        ),
+        ExperimentSpec(
+            name="ddp_checkpointed_fp16",
+            entrypoint="run_ddp.py",
+            description="DDP baseline with activation checkpointing + FP16 to mimic ZeRO-style savings.",
+            tags=("ddp", "checkpoint"),
+            overrides={
+                "runtime": {
+                    "mixed_precision": "fp16",
+                    "experiment_name": "ddp_checkpointed_fp16",
+                },
+                "fsdp": {
+                    "activation_checkpointing": True,
+                },
             },
         ),
         ExperimentSpec(

@@ -40,14 +40,17 @@ Key objectives:
 - `FsdpConfig.implementation` picks between `ManualFSDP` and the official wrapper at runtime (`run_fsdp.py --fsdp-impl {manual,torch}`).
 - When manual FSDP is active:
   - The optimizer receives `list(fsdp_model.sharded_parameters())` instead of `model.parameters()`.
-  - After each backward micro-step we call `fsdp_model.sync_gradients()` before optional grad clipping and optimizer steps.
+  - After each gradient-accumulation boundary we call `fsdp_model.sync_gradients()` once to reduce network chatter.
   - Grad clipping uses `torch.nn.utils.clip_grad_norm_` over the sharded parameters.
 - Metrics label the mode as `fsdp-manual` vs `fsdp-torch`, aiding downstream analysis.
+- Telemetry injected into the training loop logs peak memory, average data-loader wait, and manual collective latency so we can quantify the implementation’s overhead.
+- Optional `--profile-steps/--profile-dir` flags piggyback on the manual FSDP path too, producing Chrome traces that clearly show the spiky all-gather / reduce-scatter regions.
 
 ## Communication Primitives Used
 - `dist.all_gather_into_tensor` / `dist.all_gather` to assemble full parameter vectors.
 - `dist.reduce_scatter_tensor` / `dist.reduce_scatter` to distribute gradients.
 - `dist.broadcast_object_list` handles epoch/step synchronization when resuming checkpoints.
+- `torch.profiler` (optional) wraps both CPU and CUDA activities so we can visualize the manual collectives alongside forward/backward compute.
 
 ## Trade-offs & Limitations
 - **Performance**: without nested auto-wrap policies or per-layer sharding, the manual approach pays extra overhead gathering the entire model each forward pass. This is acceptable for pedagogy but slower than production FSDP.

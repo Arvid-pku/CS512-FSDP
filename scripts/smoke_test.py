@@ -8,6 +8,11 @@ from pathlib import Path
 
 COMMANDS = [
     (
+        "single_gpu_fp32",
+        "python run_single.py --epochs 1 --batch-size 2 --grad-accum 1 "
+        "--precision fp32 --ckpt-dir artifacts/smoke/single",
+    ),
+    (
         "ddp_fp32",
         "torchrun --standalone --nproc_per_node=1 "
         "run_ddp.py --epochs 1 --batch-size 2 --grad-accum 1 "
@@ -51,7 +56,7 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
     args.output_dir.mkdir(parents=True, exist_ok=True)
-    for subdir in ["ddp", "fsdp_manual", "fsdp_torch"]:
+    for subdir in ["single", "ddp", "fsdp_manual", "fsdp_torch"]:
         (args.output_dir / subdir).mkdir(parents=True, exist_ok=True)
     for name, command in COMMANDS:
         try:
@@ -63,4 +68,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

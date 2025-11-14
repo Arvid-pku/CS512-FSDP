@@ -58,6 +58,8 @@ class RuntimeConfig:
     use_compile: bool = False
     experiment_name: str = "fsdp_demo"
     metrics_path: str | None = None
+    profile_steps: int = 0
+    profile_dir: str | None = None
 
 
 @dataclass

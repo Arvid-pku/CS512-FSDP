@@ -15,7 +15,13 @@ from .config import TrainConfig
 from .data import build_dataloader
 from .metrics import MetricsLogger
 from .model import TransformerLanguageModel
-from .train import _average_across_ranks, _maybe_autocast_dtype, _prepare_device
+from .train import (
+    _average_across_ranks,
+    _maybe_autocast_dtype,
+    _prepare_device,
+    _start_profiler,
+    _enable_activation_checkpointing,
+)
 from .utils import (
     cleanup_distributed,
     ensure_dir,
@@ -95,6 +101,8 @@ def train(cfg: TrainConfig) -> None:
     world_size = get_world_size()
     seed_everything(cfg.runtime.seed + rank)
     device = _prepare_device()
+    if device.type == "cuda":
+        torch.cuda.reset_peak_memory_stats(device)
     metrics = MetricsLogger(cfg.runtime.metrics_path)
     metrics.log(
         {
@@ -109,6 +117,8 @@ def train(cfg: TrainConfig) -> None:
 
     try:
         model = TransformerLanguageModel(cfg.model).to(device)
+        if cfg.fsdp.activation_checkpointing:
+            _enable_activation_checkpointing(model)
         if cfg.runtime.use_compile and hasattr(torch, "compile"):
             model = torch.compile(model)  # type: ignore[assignment]
         ddp_model = DDP(
@@ -152,14 +162,20 @@ def train(cfg: TrainConfig) -> None:
         optimizer.zero_grad(set_to_none=True)
         log_interval_start = time.time()
 
+        profiler, trace_path = _start_profiler(cfg, "ddp", device)
+        profiled_steps = 0
+        data_wait_accum = 0.0
+
         for epoch in range(current_epoch, cfg.epochs):
             sampler = getattr(dataloader, "sampler", None)
             if sampler and hasattr(sampler, "set_epoch"):
                 sampler.set_epoch(epoch)
             epoch_start = time.time()
             for batch_idx, (tokens, targets) in enumerate(dataloader, start=1):
+                load_start = time.time()
                 tokens = tokens.to(device, non_blocking=True)
                 targets = targets.to(device, non_blocking=True)
+                data_wait_accum += time.time() - load_start
 
                 autocast_ctx = (
                     torch.cuda.amp.autocast(dtype=autocast_dtype)
@@ -199,6 +215,15 @@ def train(cfg: TrainConfig) -> None:
                     optimizer.zero_grad(set_to_none=True)
                     current_step += 1
 
+                    if profiler is not None:
+                        profiler.step()
+                        profiled_steps += 1
+                        if profiled_steps >= cfg.runtime.profile_steps:
+                            profiler.export_chrome_trace(str(trace_path))
+                            profiler.__exit__(None, None, None)
+                            profiler = None
+                            log(f"[profile] Trace saved to {trace_path}")
+
                     if current_step % cfg.runtime.log_every == 0:
                         reduced_loss = _average_across_ranks(batch_loss.detach()).item()
                         elapsed = time.time() - log_interval_start
@@ -212,8 +237,17 @@ def train(cfg: TrainConfig) -> None:
                             cfg.runtime.log_every / max(elapsed, 1e-6)
                         )
                         log_interval_start = time.time()
+                        avg_data_wait = data_wait_accum / max(cfg.runtime.log_every, 1)
+                        data_wait_accum = 0.0
+                        mem_msg = ""
+                        mem_gb = None
+                        if device.type == "cuda":
+                            torch.cuda.synchronize(device)
+                            mem_gb = torch.cuda.max_memory_allocated(device) / (1024**3)
+                            torch.cuda.reset_peak_memory_stats(device)
+                            mem_msg = f", peak_mem={mem_gb:.2f}GB"
                         log(
-                            f"[DDP epoch {epoch} step {current_step}] loss={reduced_loss:.4f} tok/s={toks_per_sec:.0f}"
+                            f"[DDP epoch {epoch} step {current_step}] loss={reduced_loss:.4f} tok/s={toks_per_sec:.0f}, data_wait={avg_data_wait*1000:.1f}ms{mem_msg}"
                         )
                         metrics.log(
                             {
@@ -225,6 +259,9 @@ def train(cfg: TrainConfig) -> None:
                                 "loss": reduced_loss,
                                 "tokens_per_sec": toks_per_sec,
                                 "grad_norm": grad_norm,
+                                "avg_collective_time_sec": None,
+                                "peak_memory_gb": mem_gb,
+                                "avg_data_wait_sec": avg_data_wait,
                             }
                         )
 
@@ -254,5 +291,9 @@ def train(cfg: TrainConfig) -> None:
             }
         )
     finally:
+        if profiler is not None:
+            profiler.export_chrome_trace(str(trace_path))
+            profiler.__exit__(None, None, None)
+            log(f"[profile] Trace saved to {trace_path}")
         metrics.close()
         cleanup_distributed()

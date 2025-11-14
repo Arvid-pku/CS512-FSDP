@@ -24,6 +24,9 @@ def summarize(path: Path) -> Dict[str, object]:
     progress = [e for e in entries if e.get("event") == "progress"]
     throughput = [float(e.get("tokens_per_sec", 0.0)) for e in progress if e.get("tokens_per_sec")]
     losses = [float(e.get("loss", 0.0)) for e in progress if e.get("loss") is not None]
+    mem_usage = [float(e.get("peak_memory_gb")) for e in progress if e.get("peak_memory_gb") is not None]
+    data_wait = [float(e.get("avg_data_wait_sec")) for e in progress if e.get("avg_data_wait_sec") is not None]
+    comm_time = [float(e.get("avg_collective_time_sec")) for e in progress if e.get("avg_collective_time_sec") is not None]
     name = ""
     mode = ""
     if entries:
@@ -39,6 +42,9 @@ def summarize(path: Path) -> Dict[str, object]:
         "best_loss": min(losses) if losses else None,
         "median_tokens_per_sec": median(throughput) if throughput else None,
         "max_tokens_per_sec": max(throughput) if throughput else None,
+        "peak_memory_gb": median(mem_usage) if mem_usage else None,
+        "median_data_wait_sec": median(data_wait) if data_wait else None,
+        "median_collective_sec": median(comm_time) if comm_time else None,
         "num_points": len(progress),
     }
     return summary

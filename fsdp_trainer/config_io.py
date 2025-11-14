@@ -66,6 +66,10 @@ def apply_overrides_from_args(cfg: TrainConfig, args) -> TrainConfig:
         cfg.runtime.ckpt_dir = str(args.ckpt_dir)
     if getattr(args, "compile", False):
         cfg.runtime.use_compile = True
+    if getattr(args, "profile_steps", None) is not None:
+        cfg.runtime.profile_steps = int(args.profile_steps or 0)
+    if getattr(args, "profile_dir", None) is not None:
+        cfg.runtime.profile_dir = str(args.profile_dir)
     return cfg
 
 

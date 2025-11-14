@@ -73,6 +73,18 @@ def parse_args() -> argparse.Namespace:
         help="Disable use_orig_params",
     )
     parser.set_defaults(use_orig_params=None)
+    parser.add_argument(
+        "--profile-steps",
+        type=int,
+        default=None,
+        help="Number of optimizer steps to capture with torch.profiler (0 to disable)",
+    )
+    parser.add_argument(
+        "--profile-dir",
+        type=Path,
+        default=None,
+        help="Directory where profiler traces (Chrome JSON) are stored",
+    )
     return parser.parse_args()
 
 
