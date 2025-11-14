@@ -58,7 +58,7 @@ Key objectives:
 - **Features**: does not currently support activation checkpoint integration at the wrapper layer (handled at the model level) nor per-layer shard policies; however, the implementation is concise and easy to extend.
 
 ## Validation Plan
-- Compare throughput, loss curves (on the modular-addition synthetic dataset), and memory footprints between `fsdp_manual_bf16`, `fsdp_official`, and `ddp_fp32` using `experiments/run_experiments.py` + `experiments/analyze_metrics.py`.
+- Compare throughput, loss curves (on the modular-addition synthetic dataset), and memory footprints between the single-process baseline (`single_gpu_fp32`), `ddp_fp32`, `fsdp_manual_bf16`, and `fsdp_official` using `experiments/run_experiments.py` + `experiments/analyze_metrics.py`.
 - Ensure checkpoint save/resume works on both paths by running short restarts with `--resume`.
 
 ## Conclusion

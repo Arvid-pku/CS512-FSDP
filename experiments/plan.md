@@ -35,6 +35,7 @@ python experiments/run_experiments.py \
 ```
 (omit `--execute` to preview commands without running.)
 You can append `--size-variants small medium large` to the command above to materialize each experiment at multiple model sizes in one sweep.
+Use `single_gpu_fp32` as the “no parallel technique” baseline when analyzing metrics and computing speedups.
 
 - From JSONL logs: `loss`, `tokens_per_sec`, `grad_norm`, `avg_collective_time_sec`, `peak_memory_gb`, `avg_data_wait_sec`, and timestamps per progress interval.
 - Derived metrics:

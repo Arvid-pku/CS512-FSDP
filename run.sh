@@ -25,7 +25,7 @@ for variant in "${VARIANTS[@]}"; do
   echo "[run] Analyzing ${variant} results"
   python experiments/analyze_metrics.py \
     --experiment-dir "${OUT_DIR}" \
-    --baseline "ddp_fp32_${variant}" \
+    --baseline "single_gpu_fp32_${variant}" \
     --json-out "${OUT_DIR}/summary.json"
 
   echo "[run] Plotting ${variant} metrics"
