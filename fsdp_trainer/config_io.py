@@ -54,6 +54,12 @@ def apply_overrides_from_args(cfg: TrainConfig, args) -> TrainConfig:
         cfg.fsdp.auto_wrap_policy = args.auto_wrap
     if getattr(args, "fsdp_impl", None) is not None:
         cfg.fsdp.implementation = args.fsdp_impl
+    if getattr(args, "activation_checkpoint", None) is not None:
+        cfg.fsdp.activation_checkpointing = args.activation_checkpoint
+    if getattr(args, "limit_all_gathers", None) is not None:
+        cfg.fsdp.limit_all_gathers = args.limit_all_gathers
+    if getattr(args, "use_orig_params", None) is not None:
+        cfg.fsdp.use_orig_params = args.use_orig_params
     if getattr(args, "resume", None) is not None:
         cfg.runtime.resume_path = str(args.resume)
     if getattr(args, "ckpt_dir", None) is not None:

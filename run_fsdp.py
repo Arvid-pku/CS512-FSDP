@@ -34,6 +34,45 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--resume", type=Path, default=None, help="Path to checkpoint to resume")
     parser.add_argument("--ckpt-dir", type=Path, default=None, help="Directory to store checkpoints")
     parser.add_argument("--compile", action="store_true", help="Enable torch.compile before wrapping with FSDP")
+    parser.add_argument(
+        "--activation-checkpoint",
+        dest="activation_checkpoint",
+        action="store_true",
+        help="Enable activation checkpointing inside FSDP-wrapped modules",
+    )
+    parser.add_argument(
+        "--no-activation-checkpoint",
+        dest="activation_checkpoint",
+        action="store_false",
+        help="Disable activation checkpointing",
+    )
+    parser.set_defaults(activation_checkpoint=None)
+    parser.add_argument(
+        "--limit-all-gathers",
+        dest="limit_all_gathers",
+        action="store_true",
+        help="Limit all-gather size during sharded collectives",
+    )
+    parser.add_argument(
+        "--no-limit-all-gathers",
+        dest="limit_all_gathers",
+        action="store_false",
+        help="Disable limit_all_gathers optimization",
+    )
+    parser.set_defaults(limit_all_gathers=None)
+    parser.add_argument(
+        "--use-orig-params",
+        dest="use_orig_params",
+        action="store_true",
+        help="Enable use_orig_params flag in official FSDP",
+    )
+    parser.add_argument(
+        "--no-use-orig-params",
+        dest="use_orig_params",
+        action="store_false",
+        help="Disable use_orig_params",
+    )
+    parser.set_defaults(use_orig_params=None)
     return parser.parse_args()
 
 

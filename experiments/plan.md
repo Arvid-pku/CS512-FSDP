@@ -1,9 +1,9 @@
 # Experiment Plan: Manual FSDP vs DDP vs torch.distributed.fsdp
 
 ## Goals
-- Quantify memory and throughput differences between our manual FSDP implementation, the official torch FSDP, and DDP baselines.
-- Evaluate the effect of activation checkpointing and `limit_all_gathers` on both implementations.
-- Produce reproducible metrics (loss curves, tokens/sec) that support a final analysis section for the class project report.
+- Quantify memory (via peak GPU telemetry) and throughput differences between our manual FSDP implementation, the official torch FSDP, and DDP baselines.
+- Evaluate the effect of activation checkpointing and `limit_all_gathers` on both implementations, using the new CLI toggles for rapid iteration.
+- Produce reproducible metrics (loss curves, tokens/sec, comm time, memory) that support the final analysis section.
 
 ## Hardware / Environment
 - Nodes: 1x server with 2–4 identical GPUs (A100 preferred) and NVLink or PCIe Gen4 interconnect.
@@ -19,10 +19,10 @@
 | ID | Description | Command Stub | Metrics File |
 |----|-------------|--------------|--------------|
 | `ddp_fp32` | Baseline throughput/accuracy using vanilla DDP FP32 | `torchrun ... run_ddp.py --config artifacts/experiments/ddp_fp32.json` | `artifacts/experiments/ddp_fp32_metrics.jsonl` |
-| `fsdp_manual_bf16` | Manual FSDP (explicit gather/scatter) with bf16 | `torchrun ... run_fsdp.py --fsdp-impl manual --precision bf16 ...` | `.../fsdp_manual_bf16_metrics.jsonl` |
-| `fsdp_official` | Official torch FSDP (size auto-wrap, bf16 or fp32) | `torchrun ... run_fsdp.py --fsdp-impl torch ...` | `.../fsdp_official_metrics.jsonl` |
-| `fsdp_official_no_checkpoint` | Torch FSDP ablation w/o activation checkpointing | same as above + `--config artifacts/.../fsdp_official_no_checkpoint.json` | respective metrics |
-| `fsdp_official_no_limit_all_gathers` | Torch FSDP ablation toggling all-gather behavior | similar config override | metrics file |
+| `fsdp_manual_bf16` | Manual FSDP (explicit gather/scatter) with bf16 | `torchrun ... run_fsdp.py --fsdp-impl manual --precision bf16 --activation-checkpoint --limit-all-gathers ...` | `.../fsdp_manual_bf16_metrics.jsonl` |
+| `fsdp_official` | Official torch FSDP (size auto-wrap, bf16 or fp32) | `torchrun ... run_fsdp.py --fsdp-impl torch --activation-checkpoint --limit-all-gathers --use-orig-params ...` | `.../fsdp_official_metrics.jsonl` |
+| `fsdp_official_no_checkpoint` | Torch FSDP ablation w/o activation checkpointing | same as above + `--no-activation-checkpoint` | respective metrics |
+| `fsdp_official_no_limit_all_gathers` | Torch FSDP ablation toggling all-gather behavior | same as above + `--no-limit-all-gathers` | metrics file |
 
 All configs generated via:
 ```bash
@@ -34,7 +34,7 @@ python experiments/run_experiments.py \
 (omit `--execute` to preview commands without running.)
 
 ## Measurements
-- From JSONL logs: `loss`, `tokens_per_sec`, `grad_norm`, and timestamps per progress interval.
+- From JSONL logs: `loss`, `tokens_per_sec`, `grad_norm`, `avg_collective_time_sec`, `peak_memory_gb`, and timestamps per progress interval.
 - Derived metrics:
   - Median tokens/sec (per experiment).
   - Final / best loss comparison.
@@ -42,7 +42,7 @@ python experiments/run_experiments.py \
 - Memory observations: capture `nvidia-smi` snapshots during each run (manual step).
 
 ## Analysis Procedure
-1. Run all experiments sequentially (ensure clean GPU memory between runs).
+1. Run all experiments sequentially (ensure clean GPU memory between runs). Run `python scripts/smoke_test.py` beforehand to catch regressions.
 2. Summarize metrics:
    ```bash
    python experiments/analyze_metrics.py \
@@ -50,7 +50,7 @@ python experiments/run_experiments.py \
      --baseline ddp_fp32 \
      --json-out artifacts/experiments/summary.json
    ```
-3. Plot (optional): load `summary.json` in a notebook to produce throughput bar charts and loss curves.
+3. Plot (optional): load `summary.json` in a notebook to produce throughput bar charts, loss curves, peak memory, and collective time comparisons.
 4. Document findings:
    - Manual FSDP vs official FSDP throughput/loss differences.
    - Effect of activation checkpointing and all-gather throttling.
@@ -65,4 +65,3 @@ python experiments/run_experiments.py \
 - Metrics JSONL files + summarized JSON.
 - Short write-up with plots/tables describing the observed trade-offs.
 - Recommendation on which FSDP variant to use for the final project demo.
-

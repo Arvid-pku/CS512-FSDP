@@ -228,6 +228,8 @@ def train(cfg: TrainConfig) -> None:
     world_size = get_world_size()
     seed_everything(cfg.runtime.seed + rank)
     device = _prepare_device()
+    if device.type == "cuda":
+        torch.cuda.reset_peak_memory_stats(device)
     impl = cfg.fsdp.implementation.lower()
     manual_impl = impl == "manual"
     mode_label = f"fsdp-{impl}"
@@ -294,6 +296,8 @@ def train(cfg: TrainConfig) -> None:
 
         log_interval_start = time.time()
 
+        collective_time_accum = 0.0
+
         for epoch in range(current_epoch, cfg.epochs):
             sampler = getattr(dataloader, "sampler", None)
             if sampler and hasattr(sampler, "set_epoch"):
@@ -323,7 +327,13 @@ def train(cfg: TrainConfig) -> None:
 
                 if batch_idx % cfg.grad_accum_steps == 0:
                     if manual_impl:
+                        if device.type == "cuda":
+                            torch.cuda.synchronize(device)
+                        comm_start = time.perf_counter()
                         fsdp_model.sync_gradients()  # type: ignore[attr-defined]
+                        if device.type == "cuda":
+                            torch.cuda.synchronize(device)
+                        collective_time_accum += time.perf_counter() - comm_start
 
                     if cfg.optim.clip_grad_norm > 0:
                         if scaler.is_enabled():
@@ -363,11 +373,26 @@ def train(cfg: TrainConfig) -> None:
                             cfg.runtime.log_every / max(elapsed, 1e-6)
                         )
                         log_interval_start = time.time()
+                        avg_comm = (
+                            collective_time_accum / max(cfg.runtime.log_every, 1)
+                            if collective_time_accum > 0
+                            else None
+                        )
+                        collective_time_accum = 0.0
                         grad_norm_msg = (
                             f", grad_norm={grad_norm:.2f}" if grad_norm is not None else ""
                         )
+                        if avg_comm is not None:
+                            grad_norm_msg += f", comm={avg_comm*1000:.1f}ms"
+                        mem_msg = ""
+                        mem_gb = None
+                        if device.type == "cuda":
+                            torch.cuda.synchronize(device)
+                            mem_gb = torch.cuda.max_memory_allocated(device) / (1024**3)
+                            torch.cuda.reset_peak_memory_stats(device)
+                            mem_msg = f", peak_mem={mem_gb:.2f}GB"
                         log(
-                            f"[epoch {epoch} step {current_step}] loss={reduced_loss:.4f} tok/s={toks_per_sec:.0f}{grad_norm_msg}"
+                            f"[epoch {epoch} step {current_step}] loss={reduced_loss:.4f} tok/s={toks_per_sec:.0f}{grad_norm_msg}{mem_msg}"
                         )
                         metrics.log(
                             {
@@ -379,6 +404,8 @@ def train(cfg: TrainConfig) -> None:
                                 "loss": reduced_loss,
                                 "tokens_per_sec": toks_per_sec,
                                 "grad_norm": grad_norm,
+                                "avg_collective_time_sec": avg_comm,
+                                "peak_memory_gb": mem_gb,
                             }
                         )
 
