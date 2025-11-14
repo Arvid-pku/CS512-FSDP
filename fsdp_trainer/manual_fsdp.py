@@ -26,7 +26,10 @@ class ManualFSDP(nn.Module):
         if not dist.is_available() or not dist.is_initialized():
             raise RuntimeError("ManualFSDP requires torch.distributed to be initialized")
         self.module = module
-        self.process_group = process_group or dist.distributed_c10d._get_default_group()
+        pg = process_group or dist.group.WORLD
+        if pg is None:
+            raise RuntimeError("ManualFSDP could not find a default process group; pass one explicitly.")
+        self.process_group = pg
         self.rank = dist.get_rank(self.process_group)
         self.world_size = dist.get_world_size(self.process_group)
         if self.world_size <= 0:

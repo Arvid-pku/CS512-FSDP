@@ -88,8 +88,9 @@ Every trainer logs JSON events (loss, tokens/sec, checkpoints) whenever `runtime
 
 ## Manual FSDP Notes
 - `fsdp_trainer/manual_fsdp.py` implements sharding by keeping only the local shard as an optimizer parameter, all-gathering the full parameter vector before each forward, and reduce-scattering gradients after every backward pass.
-- The optimizer only sees the sharded flat parameter, so memory usage scales similarly to official FSDP while remaining easy to reason about.
-- Checkpoints are written by gathering the full parameter vector (manual) or via the official `state_dict_type` APIs (torch implementation). Use `--fsdp-impl` to switch between them at runtime without changing code.
+- Reduce-scatter calls are issued only at gradient-accumulation boundaries, so you pay the collective cost once per optimizer step even though multiple micro-batches may contribute.
+- The wrapper automatically uses `dist.group.WORLD` (or a user-supplied process group) and only rank zero materializes checkpoints, mirroring the rank-aware behavior of the official FSDP APIs.
+- The optimizer only sees the sharded flat parameter, so memory usage scales similarly to official FSDP while remaining easy to reason about. Use `--fsdp-impl` to switch implementations at runtime without code edits.
 
 ## Project Layout
 ```

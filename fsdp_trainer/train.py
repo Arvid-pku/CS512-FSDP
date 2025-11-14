@@ -137,7 +137,10 @@ def _save_checkpoint(
     ckpt_dir = ensure_dir(cfg.runtime.ckpt_dir)
     ckpt_path = Path(ckpt_dir) / f"fsdp_epoch{epoch}_step{step}.pt"
 
+    rank_zero = is_rank_zero()
     if isinstance(model, ManualFSDP):
+        if not rank_zero:
+            return
         model_state = model.state_dict()
         optim_state = optimizer.state_dict()
     else:
@@ -147,7 +150,7 @@ def _save_checkpoint(
             model_state = model.state_dict()
         optim_state = FSDP.optim_state_dict(model, optimizer, optim_state_dict_cfg=optim_cfg)
 
-    if not is_rank_zero():
+    if not rank_zero:
         return
     payload = {
         "model": model_state,
@@ -318,10 +321,10 @@ def train(cfg: TrainConfig) -> None:
                 else:
                     loss.backward()
 
-                if manual_impl:
-                    fsdp_model.sync_gradients()  # type: ignore[attr-defined]
-
                 if batch_idx % cfg.grad_accum_steps == 0:
+                    if manual_impl:
+                        fsdp_model.sync_gradients()  # type: ignore[attr-defined]
+
                     if cfg.optim.clip_grad_norm > 0:
                         if scaler.is_enabled():
                             scaler.unscale_(optimizer)
