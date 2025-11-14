@@ -1,0 +1,2 @@
+# PyTorch should be installed separately following https://pytorch.org/get-started/locally/
+pyyaml>=6.0
