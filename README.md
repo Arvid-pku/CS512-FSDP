@@ -6,7 +6,7 @@ This repository provides a clean PyTorch training stack that showcases how to tr
 - Modular project layout (`fsdp_trainer/`) with clear separation of config, data, model, and training logic.
 - Manual FSDP implementation (explicit all-gather/reduce-scatter sharding) plus the option to fall back to `torch.distributed.fsdp` for apples-to-apples comparisons.
 - Activation checkpointing, optional `torch.compile`, and CLI toggles for `limit_all_gathers` and `use_orig_params`.
-- Synthetic dataset for quick experiments; swap in a real dataset by editing `fsdp_trainer/data.py`.
+- Synthetic dataset defaults to a learnable modular-addition pattern (inputs are random tokens, targets are `(token + pattern_period) % vocab_size` with mild noise) so loss decreases over time even without real data.
 - Rich telemetry per log event: loss, tokens/sec, gradient norm, average data-loader wait, collective time, and peak GPU memory.
 - Optional torch.profiler capture via `--profile-steps/--profile-dir`.
 - Multiple baselines: single-process (`run_single.py`), DDP (`run_ddp.py`), manual FSDP, and official FSDP accessible via CLI + curated experiment specs.

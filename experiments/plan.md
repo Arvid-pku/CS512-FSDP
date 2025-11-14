@@ -11,7 +11,7 @@
 - Launcher: `torchrun --standalone --nproc_per_node={num_gpus}`.
 
 ## Data / Model
-- Synthetic language-model dataset (`fsdp_trainer/data.py`) with sequence length 256 and vocab size 32k.
+- Synthetic language-model dataset (`fsdp_trainer/data.py`) now uses a learnable modular-addition pattern: targets are `(token + pattern_period) % vocab_size` with configurable noise, so all methods should see decreasing loss.
 - Transformer config: embed_dim 768, 6 layers, 12 heads, FFN 3072 (configurable via JSON/YAML).
 - Training length: 2 epochs, `batch_size_per_device=8`, `grad_accum_steps=2`.
 

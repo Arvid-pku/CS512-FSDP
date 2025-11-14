@@ -10,14 +10,20 @@ from .config import DataConfig
 
 
 class SyntheticLanguageModelingDataset(Dataset):
-    """Generates synthetic token sequences on the fly.
+    """Generates synthetic token sequences with a learnable repeating pattern.
 
-    Each sample is a tuple (input_tokens, target_tokens) shifted by one position
-    for next-token prediction.
+    Pattern definition:
+      - Input tokens are random integers in [0, vocab_size).
+      - The target token is (input_token + pattern_period) % vocab_size
+        corrupted with probability `noise_prob`.
+
+    Because the mapping is deterministic most of the time, models can reduce loss
+    by learning the modular addition rule while remaining robust to injected noise.
     """
 
     def __init__(self, cfg: DataConfig) -> None:
         self.cfg = cfg
+        self.offset = cfg.pattern_period % cfg.vocab_size
 
     def __len__(self) -> int:
         return self.cfg.total_samples
@@ -25,14 +31,25 @@ class SyntheticLanguageModelingDataset(Dataset):
     def __getitem__(self, index: int) -> Tuple[torch.Tensor, torch.Tensor]:
         generator = torch.Generator()
         generator.manual_seed(self.cfg.seed + index)
-        tokens = torch.randint(
+        inputs = torch.randint(
             low=0,
             high=self.cfg.vocab_size,
-            size=(self.cfg.seq_len + 1,),
+            size=(self.cfg.seq_len,),
             generator=generator,
             dtype=torch.long,
         )
-        return tokens[:-1], tokens[1:]
+        targets = (inputs + self.offset) % self.cfg.vocab_size
+        if self.cfg.noise_prob > 0:
+            noise_mask = torch.rand(self.cfg.seq_len, generator=generator) < self.cfg.noise_prob
+            noise = torch.randint(
+                0,
+                self.cfg.vocab_size,
+                size=(self.cfg.seq_len,),
+                generator=generator,
+                dtype=torch.long,
+            )
+            targets = torch.where(noise_mask, noise, targets)
+        return inputs, targets
 
 
 def build_dataloader(

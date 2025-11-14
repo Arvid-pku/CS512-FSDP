@@ -29,6 +29,8 @@ class DataConfig:
     vocab_size: int = 32000
     num_workers: int = 2
     seed: int = 42
+    pattern_period: int = 5
+    noise_prob: float = 0.1
 
 
 @dataclass
