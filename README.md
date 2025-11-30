@@ -36,6 +36,7 @@ Manual FSDP is the default (`--fsdp-impl manual`). To run the official PyTorch w
 - `--profile-steps/--profile-dir`: capture Chrome-trace profiler files for the first N optimizer steps.
 - `--resume` / `--ckpt-dir`: control checkpoint IO locations.
 - `--compile`: compile the model before wrapping it with FSDP (requires PyTorch 2.0+).
+- `--simple-task`: shrink the synthetic dataset to 2k tokens, zero noise, and a smaller transformer so the loss drops quickly—useful when sanity-checking training without waiting for the large default setup.
 
 ### Example Config File (YAML)
 ```yaml
@@ -65,11 +66,13 @@ torchrun --nproc_per_node=4 run_fsdp.py --config configs/demo.yaml
 Single-GPU reference (no data/model parallelism):
 ```bash
 python run_single.py --epochs 1 --precision fp32
+# Add --simple-task to see loss fall rapidly on a tiny synthetic problem.
 ```
 
 To run the same model with classic DistributedDataParallel for comparison:
 ```bash
 torchrun --standalone --nproc_per_node=2 run_ddp.py --epochs 1 --precision fp32
+# The --simple-task flag is available here too for quick smoke tests.
 ```
 
 ## Experiments & Analysis

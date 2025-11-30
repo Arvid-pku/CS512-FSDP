@@ -159,8 +159,6 @@ def _save_checkpoint(
 
     rank_zero = is_rank_zero()
     if isinstance(model, ManualFSDP):
-        if not rank_zero:
-            return
         model_state = model.state_dict()
         optim_state = optimizer.state_dict()
     else:
@@ -171,6 +169,9 @@ def _save_checkpoint(
         optim_state = FSDP.optim_state_dict(model, optimizer, optim_state_dict_cfg=optim_cfg)
 
     if not rank_zero:
+        # Ensure non-rank-zero processes release references before returning.
+        del model_state
+        del optim_state
         return
     payload = {
         "model": model_state,

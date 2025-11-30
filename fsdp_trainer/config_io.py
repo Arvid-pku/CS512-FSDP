@@ -73,8 +73,36 @@ def apply_overrides_from_args(cfg: TrainConfig, args) -> TrainConfig:
     return cfg
 
 
+def apply_simple_task_overrides(cfg: TrainConfig) -> TrainConfig:
+    """Retune the config for a much smaller, noise-free synthetic task."""
+
+    cfg.model.vocab_size = 2048
+    cfg.model.embed_dim = 256
+    cfg.model.num_layers = 4
+    cfg.model.num_heads = 4
+    cfg.model.ff_hidden_dim = 1024
+    cfg.model.dropout = 0.05
+    cfg.model.max_seq_len = 128
+
+    cfg.data.vocab_size = cfg.model.vocab_size
+    cfg.data.total_samples = 16384
+    cfg.data.seq_len = 128
+    cfg.data.pattern_period = 3
+    cfg.data.noise_prob = 0.0
+
+    cfg.optim.lr = 1e-3
+
+    cfg.runtime.log_every = min(cfg.runtime.log_every, 5)
+
+    cfg.batch_size_per_device = 32
+    cfg.fsdp.activation_checkpointing = False
+
+    return cfg
+
+
 __all__ = [
     "load_config_file",
     "build_config_from_dict",
     "apply_overrides_from_args",
+    "apply_simple_task_overrides",
 ]

@@ -52,6 +52,7 @@ class ManualFSDP(nn.Module):
         # Break the link so the managed module parameters no longer own storage.
         for p in self._managed_params:
             p.detach_()
+            p.requires_grad_(False)
             p.zero_()
 
     def sharded_parameters(self) -> Iterable[nn.Parameter]:
@@ -152,6 +153,8 @@ class ManualFSDP(nn.Module):
             return
         full_flat = self._gather_full_flat()
         vector_to_parameters(full_flat, self._managed_params)
+        for param in self._managed_params:
+            param.requires_grad_(True)
         self._materialized = True
 
     def _release_full_params(self) -> None:
@@ -159,5 +162,6 @@ class ManualFSDP(nn.Module):
             return
         for param in self._managed_params:
             param.detach_()
+            param.requires_grad_(False)
             param.zero_()
         self._materialized = False

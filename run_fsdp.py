@@ -7,6 +7,7 @@ from pathlib import Path
 from fsdp_trainer import TrainConfig
 from fsdp_trainer.config_io import (
     apply_overrides_from_args,
+    apply_simple_task_overrides,
     build_config_from_dict,
     load_config_file,
 )
@@ -85,6 +86,11 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="Directory where profiler traces (Chrome JSON) are stored",
     )
+    parser.add_argument(
+        "--simple-task",
+        action="store_true",
+        help="Swap in the toy synthetic task for quick experiments",
+    )
     return parser.parse_args()
 
 
@@ -94,6 +100,8 @@ def main() -> None:
     if args.config:
         cfg = build_config_from_dict(load_config_file(args.config))
     cfg = apply_overrides_from_args(cfg, args)
+    if args.simple_task:
+        cfg = apply_simple_task_overrides(cfg)
     train(cfg)
 
 

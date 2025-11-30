@@ -9,13 +9,13 @@ from typing import Dict, Tuple
 class ModelConfig:
     """Hyperparameters that define the transformer language model."""
 
-    vocab_size: int = 32000
+    vocab_size: int = 16384
     embed_dim: int = 1024
     num_layers: int = 12
     num_heads: int = 16
     ff_hidden_dim: int = 4096
     dropout: float = 0.1
-    max_seq_len: int = 256
+    max_seq_len: int = 128
     tie_embedding_weights: bool = True
 
 
@@ -24,13 +24,13 @@ class DataConfig:
     """Parameters describing the dataset and data-loading strategy."""
 
     dataset_impl: str = "synthetic"
-    total_samples: int = 131072
-    seq_len: int = 256
-    vocab_size: int = 32000
+    total_samples: int = 81920
+    seq_len: int = 128
+    vocab_size: int = 16384
     num_workers: int = 2
     seed: int = 42
     pattern_period: int = 5
-    noise_prob: float = 0.1
+    noise_prob: float = 0.05
 
 
 @dataclass
@@ -52,8 +52,8 @@ class RuntimeConfig:
 
     seed: int = 1337
     backend: str = "nccl"
-    log_every: int = 10
-    ckpt_every: int = 200
+    log_every: int = 100
+    ckpt_every: int = 4000
     ckpt_dir: str = "artifacts/checkpoints"
     resume_path: str | None = None
     mixed_precision: str = "bf16"  # bf16 | fp16 | fp32
