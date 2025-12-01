@@ -5,13 +5,18 @@ import argparse
 import json
 import shlex
 import subprocess
+import sys
 from pathlib import Path
 from typing import Dict, Iterable, List
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 from fsdp_trainer import TrainConfig
 from fsdp_trainer.config_io import build_config_from_dict, load_config_file
 
-from .specs import ExperimentSpec, default_experiments
+from experiments.specs import ExperimentSpec, default_experiments
 
 SIZE_VARIANTS = {
     "small": {
@@ -20,11 +25,11 @@ SIZE_VARIANTS = {
     },
     "medium": {
         "model": {"embed_dim": 768, "num_layers": 12, "num_heads": 12, "ff_hidden_dim": 3072},
-        "data": {"seq_len": 256},
+        "data": {"seq_len": 128},
     },
     "large": {
         "model": {"embed_dim": 1024, "num_layers": 16, "num_heads": 16, "ff_hidden_dim": 4096},
-        "data": {"seq_len": 384},
+        "data": {"seq_len": 128},
     },
 }
 
@@ -58,8 +63,19 @@ def materialize_config(
     return cfg_path
 
 
-def build_command(launcher: str, entrypoint: str, config_path: Path) -> str:
-    return f"{launcher} {entrypoint} --config {shlex.quote(str(config_path))}"
+def build_command(
+    default_launcher: str,
+    entrypoint: str,
+    config_path: Path,
+    tags: tuple[str, ...],
+) -> str:
+    if "single" in tags:
+        runner = shlex.quote(sys.executable)
+    else:
+        runner = default_launcher.strip()
+    if not runner:
+        return f"{entrypoint} --config {shlex.quote(str(config_path))}"
+    return f"{runner} {entrypoint} --config {shlex.quote(str(config_path))}"
 
 
 def filter_specs(specs: Iterable[ExperimentSpec], only: List[str] | None) -> List[ExperimentSpec]:
@@ -124,7 +140,7 @@ def main() -> None:
     for spec in specs:
         for variant in size_variants:
             cfg_path = materialize_config(spec, args.output_dir, base_cfg, variant)
-            command = build_command(args.launcher, spec.entrypoint, cfg_path)
+            command = build_command(args.launcher, spec.entrypoint, cfg_path, spec.tags)
             exp_name = spec.name if variant is None else f"{spec.name}_{variant}"
             commands.append((exp_name, command, spec.description))
             if args.execute:

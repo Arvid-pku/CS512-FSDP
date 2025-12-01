@@ -88,8 +88,8 @@ class TrainConfig:
     optim: OptimizerConfig = field(default_factory=OptimizerConfig)
     runtime: RuntimeConfig = field(default_factory=RuntimeConfig)
     fsdp: FsdpConfig = field(default_factory=FsdpConfig)
-    epochs: int = 3
-    batch_size_per_device: int = 8
+    epochs: int = 8
+    batch_size_per_device: int = 16
     grad_accum_steps: int = 1
 
     def to_dict(self) -> Dict[str, object]:

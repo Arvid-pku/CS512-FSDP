@@ -9,19 +9,19 @@ from pathlib import Path
 COMMANDS = [
     (
         "single_gpu_fp32",
-        "python run_single.py --epochs 1 --batch-size 2 --grad-accum 1 "
+        "python run_single.py --epochs 2 --batch-size 16 --grad-accum 1 "
         "--precision fp32 --ckpt-dir artifacts/smoke/single",
     ),
     (
         "ddp_fp32",
         "torchrun --standalone --nproc_per_node=1 "
-        "run_ddp.py --epochs 1 --batch-size 2 --grad-accum 1 "
+        "run_ddp.py --epochs 2 --batch-size 16 --grad-accum 1 "
         "--precision fp32 --ckpt-dir artifacts/smoke/ddp",
     ),
     (
         "fsdp_manual_bf16",
         "torchrun --standalone --nproc_per_node=1 "
-        "run_fsdp.py --epochs 1 --batch-size 2 --grad-accum 1 "
+        "run_fsdp.py --epochs 2 --batch-size 16 --grad-accum 1 "
         "--precision bf16 --fsdp-impl manual "
         "--ckpt-dir artifacts/smoke/fsdp_manual --activation-checkpoint "
         "--limit-all-gathers --use-orig-params",
@@ -29,7 +29,7 @@ COMMANDS = [
     (
         "fsdp_torch_fp16",
         "torchrun --standalone --nproc_per_node=1 "
-        "run_fsdp.py --epochs 1 --batch-size 2 --grad-accum 1 "
+        "run_fsdp.py --epochs 2 --batch-size 16 --grad-accum 1 "
         "--precision fp16 --fsdp-impl torch "
         "--ckpt-dir artifacts/smoke/fsdp_torch --activation-checkpoint "
         "--limit-all-gathers --use-orig-params",

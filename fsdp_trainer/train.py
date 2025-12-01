@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import time
 from contextlib import nullcontext
+import inspect
 from functools import partial
 from pathlib import Path
 from typing import Optional, Tuple
@@ -44,6 +45,9 @@ from .utils import (
     log,
     seed_everything,
 )
+
+
+_FSDP_SUPPORTS_OPTIM_CFG = "optim_state_dict_cfg" in inspect.signature(FSDP.optim_state_dict).parameters
 
 
 _SHARDING_MAP = {
@@ -163,10 +167,17 @@ def _save_checkpoint(
         optim_state = optimizer.state_dict()
     else:
         state_cfg = FullStateDictConfig(offload_to_cpu=True, rank0_only=True)
-        optim_cfg = FullOptimStateDictConfig(offload_to_cpu=True, rank0_only=True)
+        optim_cfg = (
+            FullOptimStateDictConfig(offload_to_cpu=True, rank0_only=True)
+            if _FSDP_SUPPORTS_OPTIM_CFG
+            else None
+        )
         with FSDP.state_dict_type(model, StateDictType.FULL_STATE_DICT, state_cfg):
             model_state = model.state_dict()
-        optim_state = FSDP.optim_state_dict(model, optimizer, optim_state_dict_cfg=optim_cfg)
+        optim_state_kwargs = {}
+        if _FSDP_SUPPORTS_OPTIM_CFG and optim_cfg is not None:
+            optim_state_kwargs["optim_state_dict_cfg"] = optim_cfg
+        optim_state = FSDP.optim_state_dict(model, optimizer, **optim_state_kwargs)
 
     if not rank_zero:
         # Ensure non-rank-zero processes release references before returning.
