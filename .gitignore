@@ -3,3 +3,5 @@ experiments/__pycache__/
 fsdp_trainer/__pycache__/
 *.pyc
 artifacts/
+.venv/
+env/

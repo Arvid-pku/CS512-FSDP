@@ -9,7 +9,7 @@ BASE_CONFIG=${BASE_CONFIG:-""}
 # python scripts/smoke_test.py
 
 # VARIANTS=("small" "medium" "large")
-VARIANTS=("large")
+VARIANTS=("medium")
 
 for variant in "${VARIANTS[@]}"; do
   OUT_DIR="artifacts/experiments/${variant}"

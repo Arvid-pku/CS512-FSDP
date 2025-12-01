@@ -156,26 +156,26 @@ def default_experiments() -> List[ExperimentSpec]:
                 },
             },
         ),
-        ExperimentSpec(
-            name="fsdp_official",
-            entrypoint="run_fsdp.py",
-            description="torch.distributed.fsdp configuration mirroring the official tutorial (size wrap, fp32).",
-            tags=("fsdp", "official"),
-            overrides={
-                "runtime": {
-                    "mixed_precision": "fp32",
-                    "experiment_name": "fsdp_official",
-                },
-                "fsdp": {
-                    "implementation": "torch",
-                    "auto_wrap_policy": "size",
-                    "activation_checkpointing": True,
-                    "limit_all_gathers": True,
-                    "use_orig_params": True,
-                    "cpu_offload": False,
-                },
-            },
-        ),
+        # ExperimentSpec(
+        #     name="fsdp_official",
+        #     entrypoint="run_fsdp.py",
+        #     description="torch.distributed.fsdp configuration mirroring the official tutorial (size wrap, fp32).",
+        #     tags=("fsdp", "official"),
+        #     overrides={
+        #         "runtime": {
+        #             "mixed_precision": "fp32",
+        #             "experiment_name": "fsdp_official",
+        #         },
+        #         "fsdp": {
+        #             "implementation": "torch",
+        #             "auto_wrap_policy": "size",
+        #             "activation_checkpointing": True,
+        #             "limit_all_gathers": True,
+        #             "use_orig_params": True,
+        #             "cpu_offload": False,
+        #         },
+        #     },
+        # ),
         # ExperimentSpec(
         #     name="fsdp_official_bf16",
         #     entrypoint="run_fsdp.py",
