@@ -120,6 +120,11 @@ def parse_args() -> argparse.Namespace:
         choices=list(SIZE_VARIANTS.keys()),
         help="Optional model size variants (small/medium/large) to expand each experiment",
     )
+    parser.add_argument(
+        "--skip-existing",
+        action="store_true",
+        help="Skip launching runs whose metrics file already exists and is non-empty",
+    )
     return parser.parse_args()
 
 
@@ -136,20 +141,30 @@ def main() -> None:
         base_cfg = build_config_from_dict(load_config_file(args.base_config))
 
     size_variants = args.size_variants or [None]
-    commands: List[tuple[str, str, str]] = []
+    commands: List[tuple[str, str, str, bool]] = []
     for spec in specs:
         for variant in size_variants:
+            exp_name = spec.name if variant is None else f"{spec.name}_{variant}"
             cfg_path = materialize_config(spec, args.output_dir, base_cfg, variant)
             command = build_command(args.launcher, spec.entrypoint, cfg_path, spec.tags)
-            exp_name = spec.name if variant is None else f"{spec.name}_{variant}"
-            commands.append((exp_name, command, spec.description))
-            if args.execute:
+            metrics_path = args.output_dir / f"{exp_name}_metrics.jsonl"
+            metrics_exists = metrics_path.exists() and metrics_path.stat().st_size > 0
+            skip_run = args.skip_existing and metrics_exists
+            skipped = False
+            if args.execute and skip_run:
+                skipped = True
+                print(f"\n[skip] {exp_name}: found existing metrics at {metrics_path}")
+            elif args.execute:
                 print(f"\n[exec] {exp_name}: {command}")
                 subprocess.run(command, shell=True, check=True)
+            commands.append((exp_name, command, spec.description, skipped))
 
     print("\nGenerated experiments:")
-    for name, command, desc in commands:
-        print(f"- {name}: {command}\n    {desc}")
+    for name, command, desc, skipped in commands:
+        print(f"- {name}: {command}")
+        print(f"    {desc}")
+        if skipped:
+            print("    (skipped execution; metrics already present)")
 
 
 if __name__ == "__main__":

@@ -9,7 +9,7 @@ BASE_CONFIG=${BASE_CONFIG:-""}
 # python scripts/smoke_test.py
 
 # VARIANTS=("small" "medium" "large")
-VARIANTS=("medium")
+VARIANTS=("large")
 
 for variant in "${VARIANTS[@]}"; do
   OUT_DIR="artifacts/experiments/${variant}"
@@ -18,6 +18,7 @@ for variant in "${VARIANTS[@]}"; do
        --launcher "${LAUNCHER}"
        --output-dir "${OUT_DIR}"
        --size-variants "${variant}"
+       --skip-existing
        --execute)
   if [[ -n "${BASE_CONFIG}" ]]; then
     CMD+=(--base-config "${BASE_CONFIG}")
