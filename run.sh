@@ -8,8 +8,8 @@ BASE_CONFIG=${BASE_CONFIG:-""}
 # echo "[run] Smoke-testing entrypoints..."
 # python scripts/smoke_test.py
 
-# VARIANTS=("small" "medium" "large")
-VARIANTS=("medium")
+VARIANTS=("small" "medium" "large")
+# VARIANTS=("medium")
 
 for variant in "${VARIANTS[@]}"; do
   OUT_DIR="artifacts/experiments/${variant}"
@@ -26,10 +26,10 @@ for variant in "${VARIANTS[@]}"; do
   "${CMD[@]}"
 
   echo "[run] Analyzing ${variant} results"
-  python experiments/analyze_metrics.py \
-    --experiment-dir "${OUT_DIR}" \
-    --baseline "single_gpu_fp32_${variant}" \
-    --json-out "${OUT_DIR}/summary.json"
+  # python experiments/analyze_metrics.py \
+  #   --experiment-dir "${OUT_DIR}" \
+  #   --baseline "single_gpu_fp32_${variant}" \
+  #   --json-out "${OUT_DIR}/summary.json"
 
   echo "[run] Plotting ${variant} metrics"
   python scripts/plot_metrics.py \

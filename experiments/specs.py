@@ -16,18 +16,18 @@ class ExperimentSpec:
 
 def default_experiments() -> List[ExperimentSpec]:
     return [
-        ExperimentSpec(
-            name="single_gpu_fp32",
-            entrypoint="run_single.py",
-            description="Single-process baseline to measure pure compute throughput.",
-            tags=("single", "baseline"),
-            overrides={
-                "runtime": {
-                    "mixed_precision": "fp32",
-                    "experiment_name": "single_gpu_fp32",
-                }
-            },
-        ),
+        # ExperimentSpec(
+        #     name="single_gpu_fp32",
+        #     entrypoint="run_single.py",
+        #     description="Single-process baseline to measure pure compute throughput.",
+        #     tags=("single", "baseline"),
+        #     overrides={
+        #         "runtime": {
+        #             "mixed_precision": "fp32",
+        #             "experiment_name": "single_gpu_fp32",
+        #         }
+        #     },
+        # ),
         ExperimentSpec(
             name="ddp_fp32",
             entrypoint="run_ddp.py",
