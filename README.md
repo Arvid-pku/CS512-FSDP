@@ -152,11 +152,3 @@ run_fsdp.py             # CLI entrypoint that wires configs to the trainer
 README.md               # this file
 requirements.txt        # minimal dependency list (PyTorch not pinned)
 ```
-
-## Next Steps / Customization
-- Replace `SyntheticLanguageModelingDataset` with your real dataset loader; just keep the `(tokens, targets)` contract.
-- Adjust `ModelConfig` or drop in a different architecture in `fsdp_trainer/model.py`.
-- Tweak the FSDP knobs under `FsdpConfig` (e.g., switch to `size` auto-wrap for non-transformer models).
-- Extend `TrainConfig` or the CLI with additional arguments that your project needs.
-
-Feel free to open issues or comments if you plan to evolve this into a larger research project.
